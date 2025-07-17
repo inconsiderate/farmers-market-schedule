@@ -67,17 +67,17 @@ const MARKET_LOCATIONS = {
 // Fetch vendor data for a specific location
 // Update loading message
 function updateLoadingMessage(locationKey) {
-    if (loadingMessageEl) {
+    if (loadingTextEl && loadingBannerEl) {
         const locationName = MARKET_LOCATIONS[locationKey].name;
-        loadingMessageEl.textContent = `📡 Loading ${locationName} data...`;
-        loadingMessageEl.style.display = 'block';
+        loadingTextEl.textContent = `📡 Loading ${locationName} data...`;
+        loadingBannerEl.classList.add('visible');
     }
 }
 
 // Hide loading message
 function hideLoadingMessage() {
-    if (loadingMessageEl) {
-        loadingMessageEl.style.display = 'none';
+    if (loadingBannerEl) {
+        loadingBannerEl.classList.remove('visible');
     }
 }
 
@@ -104,9 +104,6 @@ async function fetchLocationData(locationKey) {
     if (vendorDataCache.has(locationKey)) {
         return vendorDataCache.get(locationKey);
     }
-    
-    // Update loading message
-    updateLoadingMessage(locationKey);
     
     // Create a promise for this fetch operation
     const fetchPromise = async () => {
@@ -189,6 +186,12 @@ async function loadVendorData(locationKey = 'kits') {
         document.getElementById('vendorGrid').innerHTML = 
             `<div class="empty-state"><h3>Loading ${MARKET_LOCATIONS[locationKey].name} vendor data...</h3><p>Please wait while we fetch the latest vendor information.</p></div>`;
         
+        // Show loading banner for initial load
+        if (loadingTextEl && loadingBannerEl) {
+            loadingTextEl.textContent = `📡 Loading ${MARKET_LOCATIONS[locationKey].name} data... (1/7)`;
+            loadingBannerEl.classList.add('visible');
+        }
+        
         // Fetch data (this will cache it)
         const fetchedData = await fetchLocationData(locationKey);
         
@@ -226,8 +229,18 @@ async function preloadAllLocations() {
     // Load locations sequentially to show loading messages
     const locationsToLoad = locationKeys.filter(key => !vendorDataCache.has(key));
     
-    for (const locationKey of locationsToLoad) {
+    for (let i = 0; i < locationsToLoad.length; i++) {
+        const locationKey = locationsToLoad[i];
         try {
+            // Update loading message with progress
+            if (loadingTextEl && loadingBannerEl) {
+                const locationName = MARKET_LOCATIONS[locationKey].name;
+                const currentProgress = i + 1 + (locationKeys.length - locationsToLoad.length);
+                const progress = `(${currentProgress}/7)`;
+                loadingTextEl.textContent = `📡 Loading ${locationName} data... ${progress}`;
+                loadingBannerEl.classList.add('visible');
+            }
+            
             await fetchLocationData(locationKey);
             console.log(`Preloaded ${MARKET_LOCATIONS[locationKey].name}`);
             
@@ -265,7 +278,7 @@ let selectedLocations = new Set(); // Start with no locations selected to show a
 let searchTerm = '';
 
 // DOM elements
-let searchBoxEl, locationFiltersEl, dateFiltersEl, categoryFiltersEl, vendorGridEl, itineraryListEl, selectedCountEl, vendorCountEl, loadingMessageEl;
+let searchBoxEl, locationFiltersEl, dateFiltersEl, categoryFiltersEl, vendorGridEl, itineraryListEl, selectedCountEl, vendorCountEl, loadingBannerEl, loadingTextEl;
 
 // Initialize the application
 function initializeApp() {
@@ -278,7 +291,8 @@ function initializeApp() {
     itineraryListEl = document.getElementById('itineraryList');
     selectedCountEl = document.getElementById('selectedCount');
     vendorCountEl = document.getElementById('vendorCount');
-    loadingMessageEl = document.getElementById('loadingMessage');
+    loadingBannerEl = document.getElementById('loadingBanner');
+    loadingTextEl = document.getElementById('loadingText');
 
     // Setup event listeners
     setupEventListeners();
@@ -976,6 +990,10 @@ function addDateToCalendar(date) {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize banner elements early so they're available during initial load
+    loadingBannerEl = document.getElementById('loadingBanner');
+    loadingTextEl = document.getElementById('loadingText');
+    
     // Load initial data for the default location (Kitsilano)
     // initializeApp() will be called from within loadVendorData()
     await loadVendorData('kits');

@@ -29,9 +29,6 @@
                 <div class="filter-checkboxes" id="locationFilters">
                     <!-- Location checkboxes will be populated here -->
                 </div>
-                <div class="loading-message" id="loadingMessage">
-                    📡 Loading Kitsilano data...
-                </div>
             </div>
 
             <div class="filter-group">
@@ -70,6 +67,14 @@
 
         <div class="stats">
             <p>Showing <span id="vendorCount">0</span> vendors</p>
+        </div>
+    </div>
+
+    <!-- Sticky loading banner -->
+    <div class="loading-banner" id="loadingBanner">
+        <div class="loading-banner-content">
+            <span class="loading-text" id="loadingText">📡 Loading Kitsilano data...</span>
+            <div class="loading-spinner"></div>
         </div>
     </div>
 
