@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmers Market Vendors</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌽 Vancouver Farmers Market Vendors 🌽</h1>
+        </header>
+
+        <div class="filters">
+            <div class="filter-info">
+                <p><strong>Note:</strong> Select multiple items within each filter group to see vendors that match <em>any</em> of your selections. Combining different filter types (dates + categories + locations) shows vendors that match <em>all</em> filter types. I hope that's not confusing!</p>
+            </div>
+            
+            <div class="search-group">
+                <label for="searchBox">🔍 Search Vendors:</label>
+                <input type="text" id="searchBox" placeholder="Search by vendor name, description, or category..." autocomplete="off">
+                <button id="clearSearch" title="Clear search">×</button>
+            </div>
+            
+            <div class="filter-group">
+                <label>Market Locations:</label>
+                <div class="filter-checkboxes" id="locationFilters">
+                    <!-- Location checkboxes will be populated here -->
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label>Filter by Dates:</label>
+                <div class="filter-checkboxes" id="dateFilters">
+                    <!-- Date checkboxes will be populated here -->
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label>Filter by Categories:</label>
+                <div class="filter-checkboxes" id="categoryFilters">
+                    <!-- Category checkboxes will be populated here -->
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <button id="clearFilters">Clear Filters</button>
+            </div>
+        </div>
+
+        <div class="itinerary-section">
+            <h3>📅 Your Market Itinerary <span id="selectedCount">(0 vendors selected)</span></h3>
+            <div id="itineraryList" class="itinerary-container">
+                <div class="empty-itinerary">
+                    <p>🛒 Select vendors to build your market itinerary</p>
+                    <p>Vendors will be grouped by their market dates</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="vendor-grid" id="vendorGrid">
+            <!-- Vendors will be populated here -->
+        </div>
+
+        <div class="stats">
+            <p>Showing <span id="vendorCount">0</span> vendors</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
