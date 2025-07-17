@@ -14,6 +14,7 @@
 
         <div class="filters">
             <div class="filter-info">
+                <div><strong>Purpose:</strong> There are certain vendors I'm always excited to see at the market <em>(holla at Rising Knead & Dead End Cider from Forbidden Fruit!)</em> but I tend to forget when they're going to show up. Last year I manually entered the dates of my favourite vendors into my calendar, so I could decide on that day if I wanted to go or not. But doing that took forever. Cue theresGotToBeABetterWay.gif! So I made this, and now I can easily pick the vendors I want and add them all to my calendar in one step. Enjoy, if you find this useful!</div><br/>
                 <p><strong>Note:</strong> Select multiple items within each filter group to see vendors that match <em>any</em> of your selections. Combining different filter types (dates + categories + locations) shows vendors that match <em>all</em> filter types. I hope that's not confusing!</p>
             </div>
             
@@ -27,6 +28,9 @@
                 <label>Market Locations:</label>
                 <div class="filter-checkboxes" id="locationFilters">
                     <!-- Location checkboxes will be populated here -->
+                </div>
+                <div class="loading-message" id="loadingMessage">
+                    📡 Loading Kitsilano data...
                 </div>
             </div>
 
@@ -51,9 +55,10 @@
 
         <div class="itinerary-section">
             <h3>📅 Your Market Itinerary <span id="selectedCount">(0 vendors selected)</span></h3>
+            <p>Select some dates above to narrow down these results!</p>
             <div id="itineraryList" class="itinerary-container">
                 <div class="empty-itinerary">
-                    <p>🛒 Select vendors to build your market itinerary</p>
+                    <p>Select vendors to build your market itinerary</p>
                     <p>Vendors will be grouped by their market dates</p>
                 </div>
             </div>

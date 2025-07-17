@@ -65,6 +65,35 @@ const MARKET_LOCATIONS = {
 };
 
 // Fetch vendor data for a specific location
+// Update loading message
+function updateLoadingMessage(locationKey) {
+    if (loadingMessageEl) {
+        const locationName = MARKET_LOCATIONS[locationKey].name;
+        loadingMessageEl.textContent = `📡 Loading ${locationName} data...`;
+        loadingMessageEl.style.display = 'block';
+    }
+}
+
+// Hide loading message
+function hideLoadingMessage() {
+    if (loadingMessageEl) {
+        loadingMessageEl.style.display = 'none';
+    }
+}
+
+// Enable location checkbox after data is loaded
+function enableLocationCheckbox(locationKey) {
+    const checkbox = document.getElementById(`location-${locationKey}`);
+    const label = document.querySelector(`label[for="location-${locationKey}"]`);
+    
+    if (checkbox) {
+        checkbox.disabled = false;
+    }
+    if (label) {
+        label.classList.remove('disabled');
+    }
+}
+
 async function fetchLocationData(locationKey) {
     // Check if we're already loading this location
     if (loadingPromises.has(locationKey)) {
@@ -75,6 +104,9 @@ async function fetchLocationData(locationKey) {
     if (vendorDataCache.has(locationKey)) {
         return vendorDataCache.get(locationKey);
     }
+    
+    // Update loading message
+    updateLoadingMessage(locationKey);
     
     // Create a promise for this fetch operation
     const fetchPromise = async () => {
@@ -114,6 +146,9 @@ async function fetchLocationData(locationKey) {
         vendorDataCache.set(locationKey, vendorData);
         console.log(`Cached ${vendorData.length} vendors for ${MARKET_LOCATIONS[locationKey].name}`);
         
+        // Enable the checkbox for this location
+        enableLocationCheckbox(locationKey);
+        
         return vendorData;
     };
     
@@ -137,7 +172,7 @@ async function loadVendorData(locationKey = 'kits') {
         
         // Check if data is already cached
         if (vendorDataCache.has(locationKey)) {
-            console.log(`Loading ${MARKET_LOCATIONS[locationKey].name} from cache - instant!`);
+            console.log(`Loading ${MARKET_LOCATIONS[locationKey].name} from cache`);
             
             // Initialize app if not already done (first load)
             if (!dateFiltersEl) {
@@ -182,26 +217,31 @@ async function loadVendorData(locationKey = 'kits') {
 
 // Background loading for all locations
 async function preloadAllLocations() {
-    console.log('🚀 Starting background preload of all market locations...');
+    console.log('Starting background preload of all market locations...');
     
     const locationKeys = Object.keys(MARKET_LOCATIONS).filter(key => 
         MARKET_LOCATIONS[key].url && !MARKET_LOCATIONS[key].url.includes('[ID]')
     );
     
-    // Load locations in parallel (excluding the already loaded one)
-    const preloadPromises = locationKeys
-        .filter(key => !vendorDataCache.has(key))
-        .map(async (locationKey) => {
-            try {
-                await fetchLocationData(locationKey);
-                console.log(`✅ Preloaded ${MARKET_LOCATIONS[locationKey].name}`);
-            } catch (error) {
-                console.warn(`⚠️ Failed to preload ${MARKET_LOCATIONS[locationKey].name}:`, error.message);
-            }
-        });
+    // Load locations sequentially to show loading messages
+    const locationsToLoad = locationKeys.filter(key => !vendorDataCache.has(key));
     
-    await Promise.all(preloadPromises);
-    console.log('🎉 Background preloading complete! All locations will now load instantly.');
+    for (const locationKey of locationsToLoad) {
+        try {
+            await fetchLocationData(locationKey);
+            console.log(`Preloaded ${MARKET_LOCATIONS[locationKey].name}`);
+            
+            // Update location filters after each location is loaded
+            populateLocationFilters();
+        } catch (error) {
+            console.warn(`Failed to preload ${MARKET_LOCATIONS[locationKey].name}:`, error.message);
+        }
+    }
+    
+    // Hide loading message when all locations are loaded
+    hideLoadingMessage();
+    
+    console.log('Background preloading complete');
 }
 
 // Get cache statistics (useful for debugging)
@@ -210,7 +250,7 @@ function getCacheStats() {
     const cached = vendorDataCache.size;
     const loading = loadingPromises.size;
     
-    console.log(`📊 Cache Stats: ${cached}/${total} locations cached, ${loading} currently loading`);
+    console.log(`Cache Stats: ${cached}/${total} locations cached, ${loading} currently loading`);
     console.log('Cached locations:', Array.from(vendorDataCache.keys()).map(key => MARKET_LOCATIONS[key].name));
     
     return { total, cached, loading };
@@ -221,11 +261,11 @@ let selectedVendors = new Set();
 let filteredVendors = [];
 let selectedDates = new Set();
 let selectedCategories = new Set();
-let selectedLocations = new Set(['kits']); // Default to Kitsilano
+let selectedLocations = new Set(); // Start with no locations selected to show all vendors
 let searchTerm = '';
 
 // DOM elements
-let searchBoxEl, locationFiltersEl, dateFiltersEl, categoryFiltersEl, vendorGridEl, itineraryListEl, selectedCountEl, vendorCountEl;
+let searchBoxEl, locationFiltersEl, dateFiltersEl, categoryFiltersEl, vendorGridEl, itineraryListEl, selectedCountEl, vendorCountEl, loadingMessageEl;
 
 // Initialize the application
 function initializeApp() {
@@ -238,6 +278,7 @@ function initializeApp() {
     itineraryListEl = document.getElementById('itineraryList');
     selectedCountEl = document.getElementById('selectedCount');
     vendorCountEl = document.getElementById('vendorCount');
+    loadingMessageEl = document.getElementById('loadingMessage');
 
     // Setup event listeners
     setupEventListeners();
@@ -274,11 +315,12 @@ function populateLocationFilters() {
     
     Object.entries(MARKET_LOCATIONS).forEach(([key, location]) => {
         const isChecked = selectedLocations.has(key) ? 'checked' : '';
+        const isDisabled = !vendorDataCache.has(key) ? 'disabled' : '';
         const checkboxId = `location-${key}`;
         const checkboxHTML = `
             <div class="filter-checkbox">
-                <input type="checkbox" id="${checkboxId}" value="${key}" ${isChecked} onchange="handleLocationFilterChange()">
-                <label for="${checkboxId}" class="filter-checkbox-label">${location.name}</label>
+                <input type="checkbox" id="${checkboxId}" value="${key}" ${isChecked} ${isDisabled} onchange="handleLocationFilterChange()">
+                <label for="${checkboxId}" class="filter-checkbox-label ${isDisabled ? 'disabled' : ''}">${location.name}</label>
             </div>
         `;
         locationFiltersEl.insertAdjacentHTML('beforeend', checkboxHTML);
@@ -300,12 +342,14 @@ function clearFilterOptions() {
 }
 
 function populateFilters() {
-    // Get all unique dates and types from all selected locations
+    // Get all unique dates and types from all selected locations, or all cached locations if none selected
     const allDates = new Set();
     const allTypes = new Set();
     
-    // Collect data from all selected locations
-    selectedLocations.forEach(locationKey => {
+    // Collect data from all selected locations or all cached locations if none selected
+    const locationsToUse = selectedLocations.size > 0 ? selectedLocations : new Set(vendorDataCache.keys());
+    
+    locationsToUse.forEach(locationKey => {
         if (vendorDataCache.has(locationKey)) {
             const locationData = vendorDataCache.get(locationKey);
             locationData.forEach(vendor => {
@@ -511,9 +555,11 @@ function formatDate(dateString) {
 }
 
 function filterAndRenderVendors() {
-    // Collect all vendor data from selected locations
+    // Collect all vendor data from selected locations, or all cached locations if none selected
     let allVendorData = [];
-    selectedLocations.forEach(locationKey => {
+    const locationsToUse = selectedLocations.size > 0 ? selectedLocations : new Set(vendorDataCache.keys());
+    
+    locationsToUse.forEach(locationKey => {
         if (vendorDataCache.has(locationKey)) {
             const locationData = vendorDataCache.get(locationKey);
             // Add location info to each vendor for display
@@ -526,14 +572,75 @@ function filterAndRenderVendors() {
         }
     });
     
-    filteredVendors = allVendorData.filter(vendor => {
+    // Consolidate duplicate vendors from multiple locations
+    const vendorMap = new Map();
+    allVendorData.forEach(vendor => {
+        if (vendorMap.has(vendor.id)) {
+            // Vendor already exists, merge location data
+            const existingVendor = vendorMap.get(vendor.id);
+            
+            // Combine days with location information
+            vendor.days.forEach(date => {
+                const existingDateEntry = existingVendor.daysWithLocations.find(entry => entry.date === date);
+                if (existingDateEntry) {
+                    // Date already exists, add location if not already present
+                    if (!existingDateEntry.locations.some(loc => loc.key === vendor.locationKey)) {
+                        existingDateEntry.locations.push({
+                            key: vendor.locationKey,
+                            name: vendor.locationName
+                        });
+                    }
+                } else {
+                    // New date for this vendor
+                    existingVendor.daysWithLocations.push({
+                        date: date,
+                        locations: [{
+                            key: vendor.locationKey,
+                            name: vendor.locationName
+                        }]
+                    });
+                }
+            });
+            
+            // Keep track of all locations this vendor appears at
+            if (!existingVendor.allLocations.some(loc => loc.key === vendor.locationKey)) {
+                existingVendor.allLocations.push({
+                    key: vendor.locationKey,
+                    name: vendor.locationName
+                });
+            }
+            
+        } else {
+            // First time seeing this vendor
+            vendorMap.set(vendor.id, {
+                ...vendor,
+                daysWithLocations: vendor.days.map(date => ({
+                    date: date,
+                    locations: [{
+                        key: vendor.locationKey,
+                        name: vendor.locationName
+                    }]
+                })),
+                allLocations: [{
+                    key: vendor.locationKey,
+                    name: vendor.locationName
+                }]
+            });
+        }
+    });
+    
+    // Convert map back to array
+    const consolidatedVendors = Array.from(vendorMap.values());
+    
+    filteredVendors = consolidatedVendors.filter(vendor => {
         // Filter by search term (if any)
         if (searchTerm) {
+            const locationNames = vendor.allLocations.map(loc => loc.name).join(' ');
             const searchableText = [
                 vendor.name,
                 vendor.type,
                 vendor.bio,
-                vendor.locationName,
+                locationNames,
                 ...(vendor.categories || []),
                 ...(vendor.days || [])
             ].filter(Boolean).join(' ').toLowerCase();
@@ -545,7 +652,7 @@ function filterAndRenderVendors() {
         
         // Filter by dates (if any dates are selected)
         if (selectedDates.size > 0) {
-            const hasMatchingDate = vendor.days.some(date => selectedDates.has(date));
+            const hasMatchingDate = vendor.daysWithLocations.some(dayEntry => selectedDates.has(dayEntry.date));
             if (!hasMatchingDate) {
                 return false;
             }
@@ -560,6 +667,9 @@ function filterAndRenderVendors() {
         
         return true;
     });
+    
+    // Sort vendors alphabetically by name
+    filteredVendors.sort((a, b) => a.name.localeCompare(b.name));
     
     renderVendors();
     updateVendorCount();
@@ -600,6 +710,15 @@ function createVendorCard(vendor) {
     const isSelected = selectedVendors.has(vendor.id);
     const logoSrc = vendor.logo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjRjhGOUZBIi8+CjxwYXRoIGQ9Ik0yNSAxNUwyOSAyM0gyMSAyM0wyNSAxNVoiIGZpbGw9IiM2Qzc1N0QiLz4KPC9zdmc+Cg==';
     
+    // Create market dates section with location information
+    const marketDatesHtml = vendor.daysWithLocations
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(dayEntry => {
+            const dateStr = formatDateShort(dayEntry.date);
+            const locationStr = dayEntry.locations.map(loc => loc.name).join(' & ');
+            return `<span class="date-tag">${dateStr} <small>(${locationStr})</small></span>`;
+        }).join('');
+    
     return `
         <div class="vendor-card ${isSelected ? 'selected' : ''}" data-vendor-id="${vendor.id}">
             <div class="vendor-header">
@@ -608,16 +727,15 @@ function createVendorCard(vendor) {
                 <div class="vendor-info">
                     <h3>${vendor.name}</h3>
                     <span class="vendor-type">${vendor.type || 'Vendor'}</span>
-                    ${vendor.locationName ? `<span class="vendor-location">📍 ${vendor.locationName}</span>` : ''}
                 </div>
             </div>
             
             ${vendor.bio ? `<p class="vendor-bio">${vendor.bio}</p>` : ''}
             
             <div class="vendor-dates">
-                <h4>Market Dates:</h4>
+                <h4>Market Dates & Locations:</h4>
                 <div class="dates-list">
-                    ${vendor.days.map(date => `<span class="date-tag">${formatDateShort(date)}</span>`).join('')}
+                    ${marketDatesHtml}
                 </div>
             </div>
             
@@ -681,33 +799,22 @@ function updateSelectedVendorsDisplay() {
     if (selectedVendors.size === 0) {
         itineraryListEl.innerHTML = `
             <div class="empty-itinerary">
-                <p>🛒 Select vendors to build your market itinerary</p>
+                <p>Select vendors to build your market itinerary</p>
                 <p>Vendors will be grouped by their market dates</p>
             </div>
         `;
         return;
     }
     
-    // Collect all vendor data from selected locations
-    let allVendorData = [];
-    selectedLocations.forEach(locationKey => {
-        if (vendorDataCache.has(locationKey)) {
-            const locationData = vendorDataCache.get(locationKey);
-            const vendorsWithLocation = locationData.map(vendor => ({
-                ...vendor,
-                locationKey,
-                locationName: MARKET_LOCATIONS[locationKey].name
-            }));
-            allVendorData = allVendorData.concat(vendorsWithLocation);
-        }
-    });
-    
-    const selectedVendorData = allVendorData.filter(vendor => selectedVendors.has(vendor.id));
+    // Get selected vendor data from filteredVendors (which contains consolidated data)
+    const selectedVendorData = filteredVendors.filter(vendor => selectedVendors.has(vendor.id));
     
     // Group vendors by date
     const vendorsByDate = {};
     selectedVendorData.forEach(vendor => {
-        vendor.days.forEach(date => {
+        vendor.daysWithLocations.forEach(dayEntry => {
+            const date = dayEntry.date;
+            
             // Only include dates that match the date filter (if any dates are selected)
             if (selectedDates.size > 0 && !selectedDates.has(date)) {
                 return; // Skip this date if it's not in the selected dates filter
@@ -716,10 +823,12 @@ function updateSelectedVendorsDisplay() {
             if (!vendorsByDate[date]) {
                 vendorsByDate[date] = [];
             }
-            // Avoid duplicates (same vendor might be in multiple locations)
-            if (!vendorsByDate[date].find(v => v.id === vendor.id)) {
-                vendorsByDate[date].push(vendor);
-            }
+            
+            // Add vendor with location info for this date
+            vendorsByDate[date].push({
+                ...vendor,
+                locationsForDate: dayEntry.locations
+            });
         });
     });
     
@@ -755,13 +864,16 @@ function updateSelectedVendorsDisplay() {
                 </div>
                 
                 <div class="itinerary-vendors">
-                    ${vendors.map(vendor => `
-                        <div class="itinerary-vendor">
-                            ${vendor.name}
-                            ${vendor.locationName ? `<small>(${vendor.locationName})</small>` : ''}
-                            <button class="remove" onclick="removeSelectedVendor(${vendor.id})" title="Remove vendor">×</button>
-                        </div>
-                    `).join('')}
+                    ${vendors.map(vendor => {
+                        const locationNames = vendor.locationsForDate.map(loc => loc.name).join(' & ');
+                        return `
+                            <div class="itinerary-vendor">
+                                ${vendor.name}
+                                <small>(${locationNames})</small>
+                                <button class="remove" onclick="removeSelectedVendor(${vendor.id})" title="Remove vendor">×</button>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
                 
                 <button class="itinerary-add-to-calendar" onclick="addDateToCalendar('${date}')">
@@ -816,90 +928,50 @@ function clearFilters() {
 function addDateToCalendar(date) {
     if (selectedVendors.size === 0) return;
     
-    // Collect all vendor data from selected locations
-    let allVendorData = [];
-    selectedLocations.forEach(locationKey => {
-        if (vendorDataCache.has(locationKey)) {
-            const locationData = vendorDataCache.get(locationKey);
-            const vendorsWithLocation = locationData.map(vendor => ({
-                ...vendor,
-                locationKey,
-                locationName: MARKET_LOCATIONS[locationKey].name
-            }));
-            allVendorData = allVendorData.concat(vendorsWithLocation);
-        }
-    });
-    
-    const selectedVendorData = allVendorData.filter(vendor => selectedVendors.has(vendor.id));
+    // Get selected vendor data from filteredVendors (which contains consolidated data)
+    const selectedVendorData = filteredVendors.filter(vendor => selectedVendors.has(vendor.id));
     
     // Get vendors for this specific date
     const vendorsForDate = selectedVendorData.filter(vendor => 
-        vendor.days.includes(date)
+        vendor.daysWithLocations.some(dayEntry => dayEntry.date === date)
     );
     
-    // Remove duplicates (same vendor might be in multiple locations)
-    const uniqueVendors = vendorsForDate.filter((vendor, index, self) => 
-        index === self.findIndex(v => v.id === vendor.id)
-    );
+    if (vendorsForDate.length === 0) return;
     
-    if (uniqueVendors.length === 0) return;
+    // Create vendor descriptions grouped by location
+    const locationGroups = new Map();
     
-    // Get unique locations for this date
-    const locations = [...new Set(uniqueVendors.map(v => v.locationName).filter(Boolean))];
-    const locationKeys = [...new Set(uniqueVendors.map(v => v.locationKey).filter(Boolean))];
+    vendorsForDate.forEach(vendor => {
+        const dayEntry = vendor.daysWithLocations.find(d => d.date === date);
+        if (dayEntry) {
+            dayEntry.locations.forEach(location => {
+                if (!locationGroups.has(location.name)) {
+                    locationGroups.set(location.name, []);
+                }
+                locationGroups.get(location.name).push(vendor.name);
+            });
+        }
+    });
     
-    // Create title with just the location name
-    const title = locations.length === 1 
-        ? `${locations[0]} Farmers Market`
-        : `Farmers Market - ${locations.join(' & ')}`;
-    
-    // Create description with proper grouping for multiple locations
-    let description;
-    if (locations.length === 1) {
-        // Single location - simple list
-        const vendorList = uniqueVendors.map(vendor => `• ${vendor.name}`).join('%0A');
-        description = `Visit these vendors at the ${locations[0]} farmers market:%0A%0A${vendorList}`;
-    } else {
-        // Multiple locations - group by location
-        const vendorsByLocation = {};
-        uniqueVendors.forEach(vendor => {
-            const loc = vendor.locationName || 'Unknown Location';
-            if (!vendorsByLocation[loc]) {
-                vendorsByLocation[loc] = [];
-            }
-            vendorsByLocation[loc].push(vendor.name);
+    // Build description with vendors grouped by location
+    let description = '';
+    locationGroups.forEach((vendors, locationName) => {
+        description += `${locationName}:\n`;
+        vendors.forEach(vendorName => {
+            description += `• ${vendorName}\n`;
         });
-        
-        const locationSections = Object.entries(vendorsByLocation).map(([location, vendors]) => {
-            const vendorList = vendors.map(name => `• ${name}`).join('%0A');
-            return `📍 ${location}:%0A${vendorList}`;
-        }).join('%0A%0A');
-        
-        description = `Visit these vendors at farmers markets:%0A%0A${locationSections}`;
-    }
+        description += '\n';
+    });
     
-    // Handle address - only include for single location
-    const addressText = locations.length === 1 
-        ? MARKET_LOCATIONS[locationKeys[0]]?.address || ''
-        : ''; // Leave blank for multiple locations
+    // Create calendar event
+    const formattedDate = formatDate(date);
+    const title = `Farmers Market Visit - ${formattedDate}`;
+    const startDate = new Date(date).toISOString().split('T')[0];
+    const endDate = startDate;
     
-    // Fix date parsing - convert MM-DD-YYYY to proper format
-    const [month, day, year] = date.split('-');
-    const properDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    const startDate = properDate.toISOString().slice(0, 10).replace(/-/g, '');
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate.replace(/-/g, '')}/${endDate.replace(/-/g, '')}&details=${encodeURIComponent(description)}`;
     
-    // Create Google Calendar URL
-    let calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${startDate}/${startDate}&details=${description}`;
-    
-    // Only add location if it's a single location
-    if (addressText) {
-        calendarUrl += `&location=${encodeURIComponent(addressText)}`;
-    }
-    
-    calendarUrl += '&sf=true&output=xml';
-    
-    // Open in new tab
-    window.open(calendarUrl, '_blank');
+    window.open(googleCalendarUrl, '_blank');
 }
 
 // Initialize when DOM is loaded
