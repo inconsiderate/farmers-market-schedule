@@ -24,24 +24,39 @@
                 <button id="clearSearch" title="Clear search">×</button>
             </div>
             
-            <div class="filter-group">
-                <label>Market Locations:</label>
-                <div class="filter-checkboxes" id="locationFilters">
-                    <!-- Location checkboxes will be populated here -->
+            <div class="filter-group collapsible-filter">
+                <div class="filter-header" onclick="toggleFilter(this)">
+                    <label>Market Locations:</label>
+                    <span class="filter-toggle">▼</span>
+                </div>
+                <div class="filter-content">
+                    <div class="filter-checkboxes" id="locationFilters">
+                        <!-- Location checkboxes will be populated here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="filter-group">
-                <label>Filter by Dates:</label>
-                <div class="filter-checkboxes" id="dateFilters">
-                    <!-- Date checkboxes will be populated here -->
+            <div class="filter-group collapsible-filter">
+                <div class="filter-header" onclick="toggleFilter(this)">
+                    <label>Filter by Dates:</label>
+                    <span class="filter-toggle">▼</span>
+                </div>
+                <div class="filter-content">
+                    <div class="filter-checkboxes" id="dateFilters">
+                        <!-- Date checkboxes will be populated here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="filter-group">
-                <label>Filter by Categories:</label>
-                <div class="filter-checkboxes" id="categoryFilters">
-                    <!-- Category checkboxes will be populated here -->
+            <div class="filter-group collapsible-filter">
+                <div class="filter-header" onclick="toggleFilter(this)">
+                    <label>Filter by Categories:</label>
+                    <span class="filter-toggle">▼</span>
+                </div>
+                <div class="filter-content">
+                    <div class="filter-checkboxes" id="categoryFilters">
+                        <!-- Category checkboxes will be populated here -->
+                    </div>
                 </div>
             </div>
 

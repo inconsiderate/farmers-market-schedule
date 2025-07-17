@@ -297,6 +297,9 @@ function initializeApp() {
     // Setup event listeners
     setupEventListeners();
     
+    // Initialize collapsible filters for mobile
+    initializeCollapsibleFilters();
+    
     // Populate location filters first
     populateLocationFilters();
     
@@ -307,6 +310,33 @@ function initializeApp() {
     filterAndRenderVendors();
 }
 
+// Toggle filter collapsible on mobile
+function toggleFilter(headerElement) {
+    const filterGroup = headerElement.closest('.collapsible-filter');
+    filterGroup.classList.toggle('expanded');
+}
+
+// Initialize collapsible filters
+function initializeCollapsibleFilters() {
+    const collapsibleFilters = document.querySelectorAll('.collapsible-filter');
+    
+    if (window.innerWidth <= 768) {
+        // Mobile: expand only the first filter
+        collapsibleFilters.forEach((filter, index) => {
+            if (index === 0) {
+                filter.classList.add('expanded');
+            } else {
+                filter.classList.remove('expanded');
+            }
+        });
+    } else {
+        // Desktop: expand all filters
+        collapsibleFilters.forEach(filter => {
+            filter.classList.add('expanded');
+        });
+    }
+}
+
 function setupEventListeners() {
     // Search functionality
     searchBoxEl.addEventListener('input', handleSearchInput);
@@ -314,6 +344,30 @@ function setupEventListeners() {
     
     // Clear filters
     document.getElementById('clearFilters').addEventListener('click', clearFilters);
+    
+    // Handle window resize for collapsible filters
+    window.addEventListener('resize', handleWindowResize);
+}
+
+// Handle window resize for collapsible behavior
+function handleWindowResize() {
+    const collapsibleFilters = document.querySelectorAll('.collapsible-filter');
+    
+    if (window.innerWidth > 768) {
+        // Desktop: expand all filters
+        collapsibleFilters.forEach(filter => {
+            filter.classList.add('expanded');
+        });
+    } else {
+        // Mobile: collapse all except first
+        collapsibleFilters.forEach((filter, index) => {
+            if (index === 0) {
+                filter.classList.add('expanded');
+            } else {
+                filter.classList.remove('expanded');
+            }
+        });
+    }
 }
 
 function populateLocationFilters() {

@@ -173,6 +173,89 @@ header p {
     background: #5a6268;
 }
 
+/* Collapsible filters for mobile */
+.collapsible-filter .filter-header {
+    display: none; /* Hidden by default on desktop */
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.collapsible-filter .filter-header:hover {
+    background: #e9ecef;
+}
+
+.collapsible-filter .filter-header label {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+    cursor: pointer;
+}
+
+.filter-toggle {
+    font-size: 12px;
+    transition: transform 0.2s;
+    color: #6c757d;
+}
+
+.collapsible-filter.expanded .filter-toggle {
+    transform: rotate(180deg);
+}
+
+.collapsible-filter .filter-content {
+    transition: max-height 0.3s ease-out;
+    overflow: hidden;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .collapsible-filter .filter-header {
+        display: flex;
+    }
+    
+    .collapsible-filter .filter-content {
+        max-height: 0;
+        overflow: hidden;
+    }
+    
+    .collapsible-filter.expanded .filter-content {
+        max-height: 2000px; /* Large enough to accommodate content */
+        overflow: visible;
+    }
+    
+    /* Hide the regular label on mobile when collapsible is active */
+    .collapsible-filter .filter-group label:not(.filter-header label) {
+        display: none;
+    }
+    
+    /* Ensure smooth transitions */
+    .collapsible-filter .filter-content {
+        transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    }
+    
+    .collapsible-filter:not(.expanded) .filter-content {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+}
+
+/* Desktop: ensure all filters are always expanded */
+@media (min-width: 769px) {
+    .collapsible-filter .filter-content {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    .collapsible-filter.expanded .filter-content {
+        max-height: none;
+    }
+}
+
 /* Sticky loading banner */
 .loading-banner {
     position: fixed;
@@ -714,11 +797,7 @@ header p {
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-    .filter-checkboxes {
-        max-height: 150px;
-    }
-    
+@media (max-width: 768px) {    
     .filter-checkbox-label {
         font-size: 0.8rem;
         padding: 5px 10px;
