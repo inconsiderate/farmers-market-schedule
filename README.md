@@ -2,6 +2,7 @@
 
 A simple web app to browse Vancouver farmers market vendors and plan your market visits.
 
+See it in action: https://inconsiderate.github.io/farmers-market-schedule
 ## Quick Start
 
 Open `index.html` directly, you're good to go!
